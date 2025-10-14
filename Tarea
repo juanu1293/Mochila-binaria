@@ -1,0 +1,11 @@
+Con su equipo de trabajo desarrollar un programa que permita solucionar un problema tipo mochila binaria mediante metaheurísticas por enfoque de indicadores. El lenguaje de programación es de su elección.
+
+Debe permitir al usuario ingresar los diferentes ítems con su costo y volumen, así como el tamaño de la mochila (restricción).
+Debe preguntar qué tipo de metaheurística utilizar: Contructivas, de reducción o de descomposición.
+Cuando se elija un tipo, se deben listar todas las heurísticas de sensibilidad propias de este y el usuario debe poder elegir cuáles utilizará (puede elegir varias).
+Para el caso de la heurística de sensibilidad que implica combinación lineal de factores, el usuario debe poder elegir cuántas combinaciones diferentes utilizará y deberá poder ingresar los valores para K1 y K2 de cada combinación.
+Para el caso de la heurística de sensibilidad que implica alternacia, el usuario debe poder elegir hasta 3 heurísticas que alternará y debe poder definir en qué orden se aplicarán.
+Para el caso de la heurística de sensibilidad que implica el azar, el usuario deberá poder ingresar la semilla para el procedimiento de aleatoriedad.
+Para el caso de elegir el tipo de metaheurísticas de descomposición, el usuario debe poder indicar en cuántas partes desea dividir la mochila y asignar una capacidad válida para cada submochila, así como asignar una heurística de sensibilidad para cada una de ellas.
+Al ejecutar la metaheurística, el resultado debe mostrar el vector resultante de cada heurística de sensibilidad, con su respectivo costo alcanzado y la capacidad utilizada, indicando además cuál de todas fue la mejor solución.
+NOTA: La aplicación debe permitir cargar los pesos y volúmenes de los ítems desde un archivo. Y para la sustentación, se debe llevar un archivo preparado con entre 50 y 100 ítems para las pruebas a realizar. 
