@@ -1,0 +1,11 @@
+=== RESULTADOS: Heurística de Mayor Costo ===
+Capacidad de mochila: 50.0
+
+Producto        Costo      Volumen   
+----------------------------------------
+Producto2       30.0       15.0      
+Producto4       20.0       10.0      
+----------------------------------------
+Volumen total ocupado: 25.0
+Costo total: 50.0
+Vector solución: [0, 1, 0, 1]
