@@ -1,3 +1,5 @@
-Producto1 - 100.5 - 20
-Producto2 - 80 - 15.3
-Producto3 - 120.75 - 25
+Capacidad: 50
+Producto1 - 10 - 20
+Producto2 - 30 - 15
+Producto3 - 12 - 30
+Producto4 - 20 - 10
