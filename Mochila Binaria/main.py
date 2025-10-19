@@ -1,81 +1,69 @@
-# main.py
-
+import os
 from lector_archivo import leer_datos
 from heuristicas.mayor_costo import heuristica_mayor_costo
 
-METAHEURISTICAS = {
-    "Constructivas": [
-        "Mayor costo",
-        "Menor volumen",
-        "Mayor combinación lineal de factores",
-        "Mayor costo/volumen",
-        "Azar",
-        "Alternancia",
-        "Menor capacidad residual libre"
-    ],
-    "De reducción": [
-        "Menor costo",
-        "Mayor volumen",
-        "Menor combinación lineal de factores",
-        "Menor costo/volumen",
-        "Azar",
-        "Alternancia"
-    ],
-    "De descomposición": [
-        "Dividir en submochilas"
-    ]
-}
 
-
-def mostrar_menu_principal():
-    print("\n=== MENÚ PRINCIPAL ===")
-    print("1. Cargar datos de productos")
-    print("2. Configurar y ejecutar metaheurística")
-    print("3. Salir")
+def limpiar_archivo_resultados():
+    """Elimina el contenido del archivo de resultados antes de ejecutar heurísticas nuevas."""
+    os.makedirs("resultados", exist_ok=True)
+    ruta = os.path.join("resultados", "resultado_mochila.txt")
+    open(ruta, "w").close()  # Vacía el archivo
+    print("\nArchivo de resultados vaciado correctamente.")
 
 
 def seleccionar_tipo_metaheuristica():
-    print("\nTipos de Metaheurísticas disponibles:")
-    for i, tipo in enumerate(METAHEURISTICAS.keys(), start=1):
-        print(f"{i}. {tipo}")
+    """Permite al usuario elegir el tipo de metaheurística."""
+    print("\n=== SELECCIONAR TIPO DE METAHEURÍSTICA ===")
+    print("1. Constructivas")
+    print("2. De reducción")
+    print("3. De descomposición")
 
     while True:
-        try:
-            opcion = int(input("Seleccione el tipo de metaheurística: "))
-            tipos = list(METAHEURISTICAS.keys())
-            if 1 <= opcion <= len(tipos):
-                return tipos[opcion - 1]
-            else:
-                print("Opción inválida.")
-        except ValueError:
-            print("Ingrese un número válido.")
+        opcion = input("Seleccione el tipo de metaheurística: ").strip()
+        if opcion == "1":
+            return "Constructivas"
+        elif opcion == "2":
+            return "De reducción"
+        elif opcion == "3":
+            return "De descomposición"
+        else:
+            print("Opción inválida. Intente nuevamente.")
 
 
 def seleccionar_heuristicas(tipo):
-    heuristicas = METAHEURISTICAS[tipo]
-    print(f"\nHeurísticas disponibles para {tipo}:")
-    for i, h in enumerate(heuristicas, start=1):
+    """Lista heurísticas disponibles según el tipo elegido y permite seleccionar varias."""
+    heuristicas_disponibles = {
+        "Constructivas": ["Mayor costo", "Menor volumen", "Mejor relación costo/volumen"],
+        "De reducción": ["Eliminación por bajo costo", "Eliminación por alto volumen"],
+        "De descomposición": ["División por categorías", "Agrupamiento por volumen"]
+    }
+
+    print(f"\n=== HEURÍSTICAS DISPONIBLES ({tipo}) ===")
+    lista = heuristicas_disponibles[tipo]
+
+    for i, h in enumerate(lista, start=1):
         print(f"{i}. {h}")
 
-    print("\nPuede seleccionar varias heurísticas separadas por comas (ej: 1,3)")
-    seleccion = input("Seleccione heurísticas: ")
+    print("\nPuede seleccionar varias heurísticas separadas por comas (ej: 1,3):")
+    seleccion = input("Ingrese su selección: ").strip()
+    indices = [s.strip() for s in seleccion.split(",") if s.strip().isdigit()]
 
-    seleccionadas = []
-    try:
-        indices = [int(x.strip()) for x in seleccion.split(',')]
-        for i in indices:
-            if 1 <= i <= len(heuristicas):
-                seleccionadas.append(heuristicas[i - 1])
-    except ValueError:
-        print("Entrada inválida.")
+    heuristicas_sel = []
+    for i in indices:
+        idx = int(i)
+        if 1 <= idx <= len(lista):
+            heuristicas_sel.append(lista[idx - 1])
 
-    return seleccionadas
+    if not heuristicas_sel:
+        print("No se seleccionó ninguna heurística válida. Se ejecutará la primera por defecto.")
+        heuristicas_sel = [lista[0]]
+
+    return heuristicas_sel
 
 
 def ejecutar_heuristica(nombre_heuristica, productos, capacidad):
-    """Ejecuta la heurística correspondiente según el nombre."""
+    """Ejecuta la heurística seleccionada."""
     print(f"\nEjecutando heurística: {nombre_heuristica}")
-
     if nombre_heuristica.lower() == "mayor costo":
         heuristica_mayor_costo(productos, capacidad)
     else:
@@ -87,7 +75,11 @@ def main():
     capacidad = None
 
     while True:
-        mostrar_menu_principal()
+        print("\n=== MENÚ PRINCIPAL ===")
+        print("1. Cargar datos de productos")
+        print("2. Configurar y ejecutar metaheurística")
+        print("3. Salir")
+
         opcion = input("Ingrese una opción: ").strip()
 
         if opcion == "1":
@@ -107,6 +99,9 @@ def main():
 
             tipo = seleccionar_tipo_metaheuristica()
             heuristicas_sel = seleccionar_heuristicas(tipo)
+
+            # Vaciar el archivo antes de comenzar la ejecución
+            limpiar_archivo_resultados()
 
             print("\n=== RESUMEN DE CONFIGURACIÓN ===")
             print(f"Tipo: {tipo}")
