@@ -1,5 +1,11 @@
-Capacidad: 50
-Producto1 - 10 - 20
-Producto2 - 30 - 15
-Producto3 - 12 - 30
-Producto4 - 20 - 10
+Capacidad: 40
+Producto1 - 5 - 8
+Producto2 - 6 - 4
+Producto3 - 6 - 3
+Producto4 - 3 - 11
+Producto5 - 6 - 3
+Producto6 - 14 - 15
+Producto7 - 10 - 9
+Producto8 - 4 - 8
+Producto9 - 10 - 6
+Producto10 - 9 - 12

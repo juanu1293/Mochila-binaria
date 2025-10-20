@@ -1,0 +1,24 @@
+
+=== RESULTADOS: Heurística de Azar ===
+Capacidad de mochila: 40.0
+Semilla usada: 4
+
+Producto        Costo      Volumen   
+----------------------------------------
+Producto9       10.0       6.0       
+Producto3       6.0        3.0       
+Producto1       5.0        8.0       
+Producto8       4.0        8.0       
+Producto7       10.0       9.0       
+----------------------------------------
+Volumen total ocupado: 34.0
+Costo total: 35.0
+Vector solución: [1, 0, 1, 0, 0, 0, 1, 1, 1, 0]
+==================================================
+
+=== MEJOR RESULTADO GLOBAL ===
+Heurística ganadora: Azar Const
+Volumen total: 34.0
+Costo total: 35.0
+Vector solución: [1, 0, 1, 0, 0, 0, 1, 1, 1, 0]
+========================================
