@@ -7,11 +7,22 @@ def heuristica_alternancia_reduccion(productos, capacidad):
     Parte de la solución completa (todos los ítems seleccionados) y alterna heurísticas
     de eliminación hasta que la solución respete la capacidad.
 
-    Heurísticas base soportadas: 'Menor costo', 'Mayor volumen', 'Menos costo/volumen', 'Azar'
+    Heurísticas base soportadas ahora:
+      - Menor costo
+      - Mayor volumen
+      - Menor combinación lineal (factor costo vs volumen)
+      - Menor costo/volumen
+      - Azar (Reducción)
     """
     print("\n=== Alternancia (Reducción) ===")
     print("Puede elegir hasta 3 heurísticas de reducción a alternar en el orden deseado.")
-    opciones = ['Menor costo', 'Mayor volumen', 'Menos costo/volumen', 'Azar']
+    opciones = [
+        'Menor costo',
+        'Mayor volumen',
+        'Menor combinación lineal',
+        'Menor costo/volumen',
+        'Azar'
+    ]
     for i, o in enumerate(opciones, 1):
         print(f"{i}. {o}")
 
@@ -34,6 +45,18 @@ def heuristica_alternancia_reduccion(productos, capacidad):
         except ValueError:
             seed = 0
         random.seed(seed)
+
+    # Si se seleccionó 'Menor combinación lineal', pedir peso para costo (0..1)
+    peso_cost = 0.5
+    if 'Menor combinación lineal' in heur_sel:
+        try:
+            entrada = input("Ingrese peso para costo en la combinación lineal (0..1, defecto 0.5): ").strip()
+            if entrada != "":
+                v = float(entrada)
+                if 0.0 <= v <= 1.0:
+                    peso_cost = v
+        except ValueError:
+            peso_cost = 0.5
 
     # iniciar con todos seleccionados
     seleccionados = {p['nombre'] for p in productos}
@@ -61,14 +84,19 @@ def heuristica_alternancia_reduccion(productos, capacidad):
             return min(lista, key=lambda x: x['costo'])
         if h == 'Mayor volumen':
             return max(lista, key=lambda x: x['volumen'])
-        if h == 'Menos costo/volumen':
+        if h == 'Menor combinación lineal':
+            # score = peso_cost * costo + (1 - peso_cost) * volumen
+            return min(lista, key=lambda x: (peso_cost * x['costo'] + (1 - peso_cost) * x['volumen']))
+        if h == 'Menor costo/volumen':
             return min(lista, key=lambda x: (x['costo'] / x['volumen'] if x['volumen'] > 0 else float('inf')))
         if h == 'Azar':
             return random.choice(lista)
+        # fallback
         return max(lista, key=lambda x: x['volumen'])
 
     # alternar heurísticas eliminando hasta cumplir capacidad
     while volumen_total > capacidad and seleccionados:
+        progreso = False
         for h in heur_sel:
             if volumen_total <= capacidad:
                 break
@@ -78,6 +106,10 @@ def heuristica_alternancia_reduccion(productos, capacidad):
             seleccionados.remove(a_eliminar['nombre'])
             volumen_total -= a_eliminar['volumen']
             costo_total -= a_eliminar['costo']
+            progreso = True
+        if not progreso:
+            # no se pudo eliminar más según heurísticas (evitar bucle infinito)
+            break
 
     vector = [1 if p['nombre'] in seleccionados else 0 for p in productos]
     seleccionados_list = [p for p in productos if p['nombre'] in seleccionados]
