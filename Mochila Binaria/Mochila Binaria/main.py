@@ -6,9 +6,16 @@ from heuristicas.mayor_costo_volumen import heuristica_mayor_costo_volumen
 from heuristicas.azar_const import heuristica_azar
 from heuristicas.menor_cap_residual import heuristica_menor_cap_residual_libre
 from heuristicas.heuristica_mayor_combinacion_lineal import heuristica_mayor_combinacion_lineal
+from heuristicas.heuristica_azar import ejecutar_rand
+from heuristicas.heuristica_mayor_volumen import ejecutar_vol
+from heuristicas.heuristica_menor_combinacion_lineal import ejecutar_combinacion
+from heuristicas.heuristica_menor_costo_volumen import ejecutar_costo_volumen
+from heuristicas.heuristica_menor_costo import ejecutar_costo
+from heuristicas.descomposicion import heuristica_descomposicion
 from heuristicas.alternancia_const import heuristica_alternancia_constructiva
 from heuristicas.alternancia_redu import heuristica_alternancia_reduccion
-from heuristicas.descomposicion import heuristica_descomposicion
+
+
 
 
 def limpiar_archivo_resultados():
@@ -42,9 +49,9 @@ def seleccionar_heuristicas(tipo):
     """Lista heurísticas disponibles según el tipo elegido y permite seleccionar varias."""
     heuristicas_disponibles = {
         "Constructivas": ["Mayor costo", "Menor volumen", "Mayor costo/volumen", "Mayor Combinacion Lineal",
-                          "Azar Const", "Alternancia Const", "Menor Capacidad Residual"],
-        "De reducción": ["Menor costo", "Mayor volumen", "Menor Combinacion lineal", "Menos costo/volumen",
-                         "Azar Redu", "Alternancia Redu"],
+                          "Azar Constructivo", "Alternancia Constructiva", "Menor Capacidad Residual"],
+        "De reducción": ["Menor costo", "Mayor volumen", "Menor Combinacion lineal", "Menor costo/volumen",
+                         "Azar Reductivo", "Alternancia Reductiva"],
         "De descomposición": ["Dividir en sub mochilas"]
     }
 
@@ -77,20 +84,86 @@ def ejecutar_heuristica(nombre_heuristica, productos, capacidad):
 
     if nombre_heuristica.lower() == "mayor costo":
         return heuristica_mayor_costo(productos, capacidad)
+    
     elif nombre_heuristica.lower() == "menor volumen":
         return heuristica_menor_volumen(productos, capacidad)
+    
     elif nombre_heuristica.lower() == "mayor costo/volumen":
         return heuristica_mayor_costo_volumen(productos, capacidad)
-    elif nombre_heuristica.lower() == "azar const":
+    
+    elif nombre_heuristica.lower() == "azar constructivo":
         return heuristica_azar(productos, capacidad)
+    
     elif nombre_heuristica.lower() == "menor capacidad residual":
         return heuristica_menor_cap_residual_libre(productos, capacidad)
+    
     elif nombre_heuristica.lower() == "mayor combinacion lineal":
         return heuristica_mayor_combinacion_lineal(productos, capacidad)
-    elif nombre_heuristica.lower() == "alternancia const":
+    
+    elif nombre_heuristica.lower() == "menor costo":
+        return ejecutar_costo(productos, capacidad)
+    
+    elif nombre_heuristica.lower() == "mayor volumen":
+        return ejecutar_vol(productos, capacidad)
+    
+    elif nombre_heuristica.lower() == "menor combinacion lineal":
+        # preparar los parámetros que requiere ejecutar_combinacion
+        parametros = {}
+        # pedir cuántas veces se va a ejecutar
+        while True:
+            try:
+                repeticiones = int(input("¿Cuántas veces desea ejecutar la heurística (1-11)? "))
+                if 1 <= repeticiones <= 11:
+                    break
+                else:
+                    print("Debe estar entre 1 y 11.")
+            except ValueError:
+                print("Ingrese un número válido.")
+        factores = []
+        for i in range(repeticiones):
+            while True:
+                try:
+                    k1 = float(input(f"Ingrese k1 para la iteración {i+1} (0.0 - 1.0): "))
+                    if 0.0 <= k1 <= 1.0:
+                        break
+                    else:
+                        print("k1 debe estar entre 0.0 y 1.0.")
+                except ValueError:
+                    print("Ingrese un número válido.")
+            k2 = 1 - k1
+            factores.append((k1, k2))
+        parametros["repeticiones"] = repeticiones
+        parametros["factores"] = factores
+        return ejecutar_combinacion(productos, capacidad, parametros)
+    
+    elif nombre_heuristica.lower() == "menor costo/volumen":
+        return ejecutar_costo_volumen(productos, capacidad)
+    
+    elif nombre_heuristica.lower() == "azar reductivo":
+        # Preparar los parámetros requeridos por ejecutar_rand
+        parametros = {}
+        # Pedir semilla (raíz) opcional
+        raiz = input("Ingrese la semilla (raíz) para el azar o presione Enter para no usar semilla: ").strip()
+        if raiz:
+            try:
+                parametros["raiz"] = int(raiz)
+            except ValueError:
+                print("La semilla debe ser un número entero. Se ignorará la semilla.")
+                parametros["raiz"] = None
+        else:
+            parametros["raiz"] = None
+        # Llamar la heurística pasando productos, capacidad y parámetros
+        return ejecutar_rand(productos, capacidad, parametros)
+    
+    elif nombre_heuristica.lower() == "alternancia constructiva":
         return heuristica_alternancia_constructiva(productos, capacidad)
-    elif nombre_heuristica.lower() == "alternancia redu":
+    
+    elif nombre_heuristica.lower() == "alternancia reductiva":
         return heuristica_alternancia_reduccion(productos, capacidad)
+    
+    elif nombre_heuristica.lower() == "dividir en sub mochilas":
+        return heuristica_descomposicion(productos, capacidad)
+    
     else:
         print(f"La heurística '{nombre_heuristica}' aún no está implementada.")
         return None
@@ -142,31 +215,22 @@ def main():
                 continue
 
             tipo = seleccionar_tipo_metaheuristica()
+            heuristicas_sel = seleccionar_heuristicas(tipo)
 
             # Vaciar archivo antes de iniciar ejecución
             limpiar_archivo_resultados()
 
             print("\n=== RESUMEN DE CONFIGURACIÓN ===")
             print(f"Tipo: {tipo}")
+            print(f"Heurísticas seleccionadas: {', '.join(heuristicas_sel)}")
             print(f"Capacidad de mochila: {capacidad}")
 
             resultados = []
-
-            # Si se seleccionó descomposición, ejecutar la metaheurística dedicada
-            if tipo == "De descomposición":
-                print("Se ejecutará la descomposición en sub-mochilas.")
-                resultado = heuristica_descomposicion(productos, capacidad)
+            for h in heuristicas_sel:
+                resultado = ejecutar_heuristica(h, productos, capacidad)
                 if resultado:
-                    resultado["nombre"] = "Descomposición"
+                    resultado["nombre"] = h
                     resultados.append(resultado)
-            else:
-                heuristicas_sel = seleccionar_heuristicas(tipo)
-                print(f"Heurísticas seleccionadas: {', '.join(heuristicas_sel)}")
-                for h in heuristicas_sel:
-                    resultado = ejecutar_heuristica(h, productos, capacidad)
-                    if resultado:
-                        resultado["nombre"] = h
-                        resultados.append(resultado)
 
             # Comparar resultados
             if resultados:
