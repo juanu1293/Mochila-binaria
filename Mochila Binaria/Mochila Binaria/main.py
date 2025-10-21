@@ -4,7 +4,8 @@ from heuristicas.mayor_costo import heuristica_mayor_costo
 from heuristicas.menor_volumen import heuristica_menor_volumen
 from heuristicas.mayor_costo_volumen import heuristica_mayor_costo_volumen
 from heuristicas.azar_const import heuristica_azar
-
+from heuristicas.menor_cap_residual import heuristica_menor_cap_residual_libre
+from heuristicas.heuristica_mayor_combinacion_lineal import heuristica_mayor_combinacion_lineal
 
 
 
@@ -80,6 +81,11 @@ def ejecutar_heuristica(nombre_heuristica, productos, capacidad):
         return heuristica_mayor_costo_volumen(productos, capacidad)
     elif nombre_heuristica.lower() == "azar const":
         return heuristica_azar(productos, capacidad)
+    elif nombre_heuristica.lower() == "menor capacidad residual":
+        return heuristica_menor_cap_residual_libre(productos, capacidad)
+    elif nombre_heuristica.lower() == "mayor combinacion lineal":
+        return heuristica_mayor_combinacion_lineal(productos, capacidad)
+
     else:
         print(f"La heurística '{nombre_heuristica}' aún no está implementada.")
         return None
