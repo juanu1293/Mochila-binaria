@@ -1,9 +1,20 @@
 import os
 from copy import deepcopy
+
 from heuristicas.mayor_costo import heuristica_mayor_costo
 from heuristicas.menor_volumen import heuristica_menor_volumen
 from heuristicas.mayor_costo_volumen import heuristica_mayor_costo_volumen
 from heuristicas.azar_const import heuristica_azar
+from heuristicas.menor_cap_residual import heuristica_menor_cap_residual_libre
+from heuristicas.heuristica_mayor_combinacion_lineal import heuristica_mayor_combinacion_lineal
+from heuristicas.heuristica_azar import ejecutar_rand
+from heuristicas.heuristica_mayor_volumen import ejecutar_vol
+from heuristicas.heuristica_menor_combinacion_lineal import ejecutar_combinacion
+from heuristicas.heuristica_menor_costo_volumen import ejecutar_costo_volumen
+from heuristicas.heuristica_menor_costo import ejecutar_costo
+from heuristicas.alternancia_const import heuristica_alternancia_constructiva
+from heuristicas.alternancia_redu import heuristica_alternancia_reduccion
+
 
 def _guardar_resultados_global(seleccionados, volumen_total, costo_total, vector, capacidad_total):
     os.makedirs("resultados", exist_ok=True)
@@ -21,67 +32,87 @@ def _guardar_resultados_global(seleccionados, volumen_total, costo_total, vector
 
 def heuristica_descomposicion(productos, capacidad_total):
     """
-    Permite dividir la mochila en hasta 6 sub-mochilas.
-    - El usuario indica cuántas (2..6).
-    - Para cada sub-mochila se solicita una capacidad dentro de un rango válido.
-    - El rango mínimo = volumen mínimo entre todos los productos.
-    - El rango máximo se calcula para garantizar que las mochilas restantes puedan
-      guardar (sin repetir) al menos los productos de menor volumen.
-      Cálculo: max_i = capacidad_restante - sum(menores_volumenes[:k-i])
-    - Para cada sub se asigna una heurística (Mayor costo, Menor volumen, Mayor costo/volumen, Azar).
-    - Luego se resuelven las sub-mochilas en orden de menor capacidad a mayor, sin repetir productos.
+    Divide la mochila en 2..6 sub-mochilas. Para cada sub:
+    - solicita capacidad (excepto la última: toma lo que sobra)
+    - solicita heurística a usar (varias opciones, constructivas y de reducción)
+    Resuelve las sub-mochilas en orden de menor a mayor capacidad y evita repetir productos.
     """
     if not productos:
         print("No hay productos cargados.")
         return None
 
-    n_subs = 0
+    # solicitar número de sub-mochilas
     while True:
         try:
-            n_subs = int(input("Ingrese número de sub-mochilas a crear (2..6): "))
+            n_subs = int(input("Ingrese número de sub-mochilas a crear (2..6): ").strip())
             if 2 <= n_subs <= 6:
                 break
-        except ValueError:
+        except Exception:
             pass
         print("Valor inválido. Ingrese un entero entre 2 y 6.")
 
-    # preparar volúmenes ordenados (para cálculo de máximos conservadores)
+    # preparar volúmenes ordenados para cálculos de mínimos/máximos
     vols_sorted = sorted([p['volumen'] for p in productos])
-    min_vol = vols_sorted[0]
+    min_vol = vols_sorted[0] if vols_sorted else 0
 
-    remaining_capacity = capacidad_total
+    remaining_capacity = float(capacidad_total)
     caps = []
     heuristicas = []
 
-    opciones_heur = ["Mayor costo", "Menor volumen", "Mayor costo/volumen", "Azar"]
+    # Opciones ampliadas: constructivas y de reducción, listadas para que el usuario elija
+    opciones_heur = [
+        "Mayor costo (Constructiva)",
+        "Menor volumen (Constructiva)",
+        "Mayor combinación lineal (Constructiva)",
+        "Mayor costo/volumen (Constructiva)",
+        "Azar (Constructiva)",
+        "Alternancia (Constructiva)",
+        "Menor capacidad residual libre (Constructiva)",
+        "Menor costo (Reducción)",
+        "Mayor volumen (Reducción)",
+        "Menor combinación lineal (Reducción)",
+        "Menor costo/volumen (Reducción)",
+        "Azar (Reducción)",
+        "Alternancia (Reducción)"
+    ]
+
     print("\nHeurísticas disponibles por sub-mochila:")
     for i, o in enumerate(opciones_heur, 1):
         print(f"{i}. {o}")
 
-    # solicitar capacidades y heurísticas secuencialmente (rango calculado por cada paso)
+    # solicitar capacidades y heurísticas secuencialmente; última sub toma el restante automáticamente
     for i in range(1, n_subs + 1):
         remaining_subs = n_subs - i
-        # suma de los menores volúmenes para garantizar espacio a las subs restantes
         suma_menores = sum(vols_sorted[:remaining_subs]) if remaining_subs > 0 else 0
         max_i = remaining_capacity - suma_menores
-        min_i = min_vol
+        min_i = min_vol if min_vol > 0 else 0.0
         if max_i < min_i:
-            # si por alguna razón no hay margen, forzar max = min
             max_i = min_i
 
-        # solicitar capacidad para la sub-mochila i
-        cap_i = None
-        while True:
-            try:
-                entrada = input(f"Sub-mochila {i}/{n_subs} - ingrese capacidad (mín {min_i}, máx {max_i}, restante {remaining_capacity}): ").strip()
-                cap_i = float(entrada)
-                if min_i <= cap_i <= max_i:
-                    break
-            except ValueError:
-                pass
-            print("Capacidad inválida. Intente nuevamente dentro del rango indicado.")
+        # última sub-mochila: asignar lo que sobra (no preguntar)
+        if i == n_subs:
+            cap_i = remaining_capacity
+            print(f"Sub-mochila {i}/{n_subs} - capacidad asignada automáticamente: {cap_i}")
+            # si por inconsistencia es menor que el mínimo, forzar mínimo
+            if cap_i < min_i:
+                print(f"Advertencia: capacidad restante ({cap_i}) menor que mínimo esperado ({min_i}). Se fuerza mínimo.")
+                cap_i = min_i
+            # tampoco debe exceder el máximo calculado (por seguridad)
+            if cap_i > max_i:
+                cap_i = max_i
+        else:
+            cap_i = None
+            while True:
+                try:
+                    entrada = input(f"Sub-mochila {i}/{n_subs} - ingrese capacidad (mín {min_i}, máx {max_i}, restante {remaining_capacity}): ").strip()
+                    cap_i = float(entrada)
+                    if min_i <= cap_i <= max_i:
+                        break
+                except Exception:
+                    pass
+                print("Capacidad inválida. Intente nuevamente dentro del rango indicado.")
 
-        # solicitar heurística para esta sub
+        # solicitar heurística para esta sub-mochila
         heur_i = None
         while True:
             sel = input(f"Sub-mochila {i} - seleccione heurística (ingrese índice 1-{len(opciones_heur)}): ").strip()
@@ -92,20 +123,17 @@ def heuristica_descomposicion(productos, capacidad_total):
                     break
             print("Selección inválida. Intente nuevamente.")
 
-        caps.append(cap_i)
+        caps.append(float(cap_i))
         heuristicas.append(heur_i)
-        remaining_capacity -= cap_i
+        remaining_capacity -= float(cap_i)
 
-    # validar que la suma de caps no excede la capacidad_total (debería ser válido por construcción)
+    # comprobación final simple
     if sum(caps) - 1e-9 > capacidad_total:
         print("Error interno: suma de capacidades excede la capacidad total. Abortando.")
         return None
 
-    # construir lista de sub-mochilas y resolver en orden de menor capacidad
-    subs = []
-    for idx, (c, h) in enumerate(zip(caps, heuristicas), start=1):
-        subs.append({"id": idx, "capacidad": c, "heuristica": h})
-
+    # crear lista de sub-mochilas y ordenar por capacidad (menor a mayor)
+    subs = [{"id": idx + 1, "capacidad": c, "heuristica": h} for idx, (c, h) in enumerate(zip(caps, heuristicas))]
     subs_sorted = sorted(subs, key=lambda x: x['capacidad'])
 
     productos_disponibles = deepcopy(productos)
@@ -113,14 +141,24 @@ def heuristica_descomposicion(productos, capacidad_total):
     volumen_total_global = 0
     costo_total_global = 0
 
-    # mapear nombre de heurística a función
+    # mapeo de nombres de heurística a funciones (preparado para futuras funciones)
     func_map = {
-        "Mayor costo": heuristica_mayor_costo,
-        "Menor volumen": heuristica_menor_volumen,
-        "Mayor costo/volumen": heuristica_mayor_costo_volumen,
-        "Azar": heuristica_azar
+        "Mayor costo (Constructiva)": heuristica_mayor_costo,
+        "Menor volumen (Constructiva)": heuristica_menor_volumen,
+        "Mayor combinación lineal (Constructiva)": heuristica_mayor_combinacion_lineal,
+        "Mayor costo/volumen (Constructiva)": heuristica_mayor_costo_volumen,
+        "Azar (Constructiva)": heuristica_azar,
+        "Alternancia (Constructiva)": heuristica_alternancia_constructiva,
+        "Menor capacidad residual libre (Constructiva)": heuristica_menor_cap_residual_libre,
+        "Menor costo (Reducción)": ejecutar_costo,
+        "Mayor volumen (Reducción)": ejecutar_vol,
+        "Menor combinación lineal (Reducción)": ejecutar_combinacion,
+        "Menor costo/volumen (Reducción)": ejecutar_costo_volumen,
+        "Azar (Reducción)": ejecutar_rand,
+        "Alternancia (Reducción)": heuristica_alternancia_reduccion
     }
 
+    # resolver cada sub-mochila
     for s in subs_sorted:
         hname = s['heuristica']
         cap = s['capacidad']
@@ -130,30 +168,25 @@ def heuristica_descomposicion(productos, capacidad_total):
             continue
 
         print(f"\n--- Resolviendo sub-mochila {s['id']} (cap {cap}, heurística: {hname}) ---")
-        # llamar a la heurística con los productos disponibles
         resultado = func(productos_disponibles, cap)
 
-        # resultado esperado contiene 'seleccionados' como lista de dicts y 'vector' relativo a productos_disponibles
         if not resultado:
             print(f"No se obtuvo resultado para sub-mochila {s['id']}.")
             continue
 
-        # algunos heurísticos devuelven 'seleccionados' como lista de dicts; normalizar
         sel_items = resultado.get('seleccionados', [])
         nombres_sel = {p['nombre'] for p in sel_items}
 
-        # remover items seleccionados de productos_disponibles
+        # eliminar seleccionados de disponibles
         productos_disponibles = [p for p in productos_disponibles if p['nombre'] not in nombres_sel]
 
-        # acumular totales
         volumen_total_global += resultado.get('volumen_total', 0)
         costo_total_global += resultado.get('costo_total', 0)
         seleccionados_global.update(nombres_sel)
 
-    # construir vector global con orden original de 'productos'
+    # vector global con el orden original de productos
     vector_global = [1 if p['nombre'] in seleccionados_global else 0 for p in productos]
 
-    # guardar resumen global
     _guardar_resultados_global(list(seleccionados_global), volumen_total_global, costo_total_global, vector_global, capacidad_total)
 
     return {

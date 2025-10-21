@@ -4,14 +4,26 @@ import random
 def heuristica_alternancia_constructiva(productos, capacidad):
     """
     Heurística alternancia - constructiva.
-    Permite al usuario elegir hasta 3 heurísticas constructivas y alterna entre ellas
-    para seleccionar ítems sin repetir hasta que no quepa nada más.
+    Permite al usuario elegir hasta 3 heurísticas a alternar en el orden deseado.
 
-    Heurísticas base soportadas: 'Mayor costo', 'Menor volumen', 'Mayor costo/volumen', 'Azar'
+    Heurísticas soportadas:
+      - Mayor costo
+      - Menor volumen
+      - Mayor combinación lineal (factor costo vs volumen)
+      - Mayor costo/volumen
+      - Azar (constructiva)
+      - Mayor capacidad residual libre (constructiva)
     """
     print("\n=== Alternancia (Constructiva) ===")
     print("Puede elegir hasta 3 heurísticas a alternar en el orden deseado.")
-    opciones = ['Mayor costo', 'Menor volumen', 'Mayor costo/volumen', 'Azar']
+    opciones = [
+        'Mayor costo',
+        'Menor volumen',
+        'Mayor combinación lineal',
+        'Mayor costo/volumen',
+        'Azar',
+        'Mayor capacidad residual libre'
+    ]
     for i, o in enumerate(opciones, 1):
         print(f"{i}. {o}")
 
@@ -27,7 +39,7 @@ def heuristica_alternancia_constructiva(productos, capacidad):
         print("No se seleccionó heurística válida. Usando 'Mayor costo' por defecto.")
         heur_sel = ['Mayor costo']
 
-    # semillas para azar si se usa
+    # Si se seleccionó 'Azar', solicitar semilla
     seed = None
     if 'Azar' in heur_sel:
         try:
@@ -36,16 +48,36 @@ def heuristica_alternancia_constructiva(productos, capacidad):
             seed = 0
         random.seed(seed)
 
-    seleccionados = set()
-    volumen_actual = 0
-    costo_total = 0
+    # Si se seleccionó 'Mayor combinación lineal', pedir peso para costo (0..1)
+    peso_cost = 0.5
+    if 'Mayor combinación lineal' in heur_sel:
+        try:
+            entrada = input("Ingrese peso para costo en la combinación lineal (0..1, defecto 0.5): ").strip()
+            if entrada != "":
+                v = float(entrada)
+                if 0.0 <= v <= 1.0:
+                    peso_cost = v
+        except ValueError:
+            peso_cost = 0.5
 
-    # precomputar listas ordenadas por heurística (listas de objetos)
+    seleccionados = set()
+    volumen_actual = 0.0
+    costo_total = 0.0
+
+    # Precomputar listas ordenadas por cada heurística
     listas = {}
+    # Mayor costo
     listas['Mayor costo'] = sorted(productos, key=lambda x: x['costo'], reverse=True)
+    # Menor volumen
     listas['Menor volumen'] = sorted(productos, key=lambda x: x['volumen'])
+    # Mayor combinación lineal: score = peso_cost * costo - (1-peso_cost) * volumen
+    listas['Mayor combinación lineal'] = sorted(productos, key=lambda x: (peso_cost * x['costo'] - (1 - peso_cost) * x['volumen']), reverse=True)
+    # Mayor costo/volumen
     listas['Mayor costo/volumen'] = sorted(productos, key=lambda x: (x['costo'] / x['volumen'] if x['volumen'] > 0 else float('inf')), reverse=True)
+    # Azar
     listas['Azar'] = productos.copy()
+    # Mayor capacidad residual libre -> orden por menor volumen (deja más espacio)
+    listas['Mayor capacidad residual libre'] = sorted(productos, key=lambda x: x['volumen'])
 
     # índices de posición para cada lista
     indices_pos = {k: 0 for k in listas}
